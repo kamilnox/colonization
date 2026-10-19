@@ -1,0 +1,51 @@
+name: Deploy to GitHub Pages
+
+# Every push to main or to a claude/* branch publishes the game,
+# so the phone app always runs the latest pushed version.
+on:
+  push:
+    branches: [main, 'claude/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check the game rules (bot plays a few games)
+        run: node tools/smoke.js 3
+
+      - name: Build the site folder
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          DATE=$(date -u +'%Y-%m-%d %H:%M UTC')
+          mkdir -p _site
+          cp -r index.html manifest.webmanifest sw.js css js icons _site/
+          printf 'export const BUILD = { sha: "%s", branch: "%s", date: "%s" };\n' "$SHA" "$GITHUB_REF_NAME" "$DATE" > _site/js/build.js
+          sed -i "s/const BUILD = 'dev';/const BUILD = '$SHA';/" _site/sw.js
+          touch _site/.nojekyll
+
+      - name: Publish to the gh-pages branch
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd _site
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Deploy ${GITHUB_SHA::7} from ${GITHUB_REF_NAME}"
+          git push -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+          echo "Published. Live at https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/ once Pages is enabled for the gh-pages branch." >> "$GITHUB_STEP_SUMMARY"
