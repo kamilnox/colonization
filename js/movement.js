@@ -1,10 +1,10 @@
 // Moving units around the map, plus everything that can happen when they arrive somewhere.
-import { TERRAIN, SKILLS } from './data.js';
+import { TERRAIN, SKILLS, NATIVE_PRICES, TRADE_COOLDOWN, nameOf } from './data.js';
 import {
   S, tile, inMap, isWater, explored, colonyAt, unitsAt, unitPos, reveal, notify, between, dist, neighbors,
 } from './state.js';
 import {
-  isPerson, isNaval, maxMoves, sight, unitName, freeSlots, board, makeUnit, removeUnit, setRole,
+  isPerson, isNaval, hasHold, goodsSlots, maxMoves, sight, unitName, freeSlots, board, makeUnit, removeUnit, setRole,
 } from './units.js';
 import { attack, attackStrength } from './combat.js';
 import { addGoods } from './colony.js';
@@ -61,6 +61,7 @@ export function tryMove(u, x, y) {
     return ok({ stop: true });
   }
 
+  if (t.village != null && hasHold(u)) return tradeWithNatives(u, S.villages[t.village]);
   if (isNaval(u)) {
     if (!isWater(t) && !c) return fail("Ships can't sail onto land.");
     return step(u, x, y);
@@ -196,6 +197,30 @@ function visitVillage(u, v) {
   u.moves = 0;
   const skill = SKILLS[v.skill].name;
   notify(`Your colonist lived among the ${v.tribe} and is now ${article(skill)} ${skill}!`, { kind: 'good' });
+  return ok({ stop: true });
+}
+
+// Natives buy everything a ship or wagon train carries, tax free, then need a while to save up again.
+export function tradeWait(v) {
+  return v.lastTrade == null ? 0 : Math.max(0, TRADE_COOLDOWN - (S.turn - v.lastTrade));
+}
+
+function tradeWithNatives(u, v) {
+  if (u.owner !== 'player') return fail('Only your own carriers can trade.');
+  if (!goodsSlots(u.goods)) return fail(`Bring goods to trade with the ${v.tribe}.`);
+  const wait = tradeWait(v);
+  if (wait) return fail(`The ${v.tribe} have nothing left to pay with. Come back in ${wait} turn${wait > 1 ? 's' : ''}.`);
+  let gold = 0;
+  const sold = [];
+  for (const [g, n] of Object.entries(u.goods)) {
+    gold += n * (NATIVE_PRICES[g] || 1);
+    sold.push(`${n} ${nameOf(g).toLowerCase()}`);
+  }
+  u.goods = {};
+  u.moves = 0;
+  S.player.gold += gold;
+  v.lastTrade = S.turn;
+  notify(`The ${v.tribe} bought ${sold.join(' and ')} for ${gold} gold.`, { kind: 'good' });
   return ok({ stop: true });
 }
 

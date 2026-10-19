@@ -4,9 +4,11 @@ export const TILE = 48;               // tile size in CSS pixels at zoom 1
 export const MAP_W = 40;
 export const MAP_H = 52;
 export const START_YEAR = 1492;
-export const START_GOLD = 1000;
+export const START_GOLD = 1500;
 export const LIBERTY_PER_REBEL = 50;  // bells needed to win one colonist over to the cause
-export const FOOD_TO_GROW = 200;      // stored food that becomes a new colonist
+export const FOOD_TO_GROW = 150;      // stored food that becomes a new colonist
+export const CENTER_FOOD_BONUS = 2;   // the colony tile itself is always well farmed
+export const TRADE_COOLDOWN = 8;      // turns before a native village buys goods again
 export const BASE_STORAGE = 100;      // warehouse capacity per good
 export const SAIL_TURNS = 3;          // turns to cross the Atlantic
 export const DECLARE_AT = 50;         // rebel % needed to declare independence
@@ -43,22 +45,22 @@ export const nameOf = g => (GOODS[g] || VIRTUAL[g] || {}).name || g;
 
 // move: movement cost in whole moves. def: defence bonus for units standing here.
 export const TERRAIN = {
-  ocean:     { name: 'Ocean', color: '#2a5b86', water: true, move: 1, prod: { food: 4 } },
+  ocean:     { name: 'Ocean', color: '#2a5b86', water: true, move: 1, prod: { food: 5 } },
   tundra:    { name: 'Tundra', color: '#a7b398', move: 1, prod: { food: 3, ore: 2 },
-               forest: { name: 'Boreal Forest', prod: { food: 2, furs: 3, lumber: 4, ore: 1 } } },
-  prairie:   { name: 'Prairie', color: '#cbb968', move: 1, prod: { food: 3, cotton: 3 },
-               forest: { name: 'Broadleaf Forest', prod: { food: 2, furs: 2, lumber: 4 } } },
-  grassland: { name: 'Grassland', color: '#79a649', move: 1, prod: { food: 3, tobacco: 3 },
-               forest: { name: 'Conifer Forest', prod: { food: 2, furs: 2, lumber: 6 } } },
-  plains:    { name: 'Plains', color: '#a9b85b', move: 1, prod: { food: 5, cotton: 2 },
-               forest: { name: 'Mixed Forest', prod: { food: 3, furs: 3, lumber: 6 } } },
-  savanna:   { name: 'Savannah', color: '#8fb244', move: 1, prod: { food: 4, sugar: 3 },
-               forest: { name: 'Tropical Forest', prod: { food: 3, furs: 2, lumber: 4 } } },
-  marsh:     { name: 'Marsh', color: '#6d8256', move: 2, def: 0.25, prod: { food: 3, tobacco: 2, ore: 2 },
-               forest: { name: 'Wetland Forest', prod: { food: 2, furs: 2, lumber: 4, ore: 1 } } },
-  desert:    { name: 'Desert', color: '#d8c38a', move: 1, prod: { food: 2, cotton: 1, ore: 2 },
-               forest: { name: 'Scrub Forest', prod: { food: 2, furs: 2, lumber: 2 } } },
-  hills:     { name: 'Hills', color: '#9b8455', move: 2, def: 1.0, prod: { food: 2, ore: 4 } },
+               forest: { name: 'Boreal Forest', prod: { food: 2, furs: 4, lumber: 5, ore: 1 } } },
+  prairie:   { name: 'Prairie', color: '#cbb968', move: 1, prod: { food: 4, cotton: 4 },
+               forest: { name: 'Broadleaf Forest', prod: { food: 3, furs: 3, lumber: 5 } } },
+  grassland: { name: 'Grassland', color: '#79a649', move: 1, prod: { food: 4, tobacco: 4 },
+               forest: { name: 'Conifer Forest', prod: { food: 3, furs: 3, lumber: 6 } } },
+  plains:    { name: 'Plains', color: '#a9b85b', move: 1, prod: { food: 6, cotton: 3 },
+               forest: { name: 'Mixed Forest', prod: { food: 3, furs: 4, lumber: 6 } } },
+  savanna:   { name: 'Savannah', color: '#8fb244', move: 1, prod: { food: 5, sugar: 4 },
+               forest: { name: 'Tropical Forest', prod: { food: 3, furs: 3, lumber: 5 } } },
+  marsh:     { name: 'Marsh', color: '#6d8256', move: 2, def: 0.25, prod: { food: 3, tobacco: 3, ore: 2 },
+               forest: { name: 'Wetland Forest', prod: { food: 2, furs: 3, lumber: 4, ore: 1 } } },
+  desert:    { name: 'Desert', color: '#d8c38a', move: 1, prod: { food: 2, cotton: 2, ore: 2 },
+               forest: { name: 'Scrub Forest', prod: { food: 2, furs: 2, lumber: 3 } } },
+  hills:     { name: 'Hills', color: '#9b8455', move: 2, def: 1.0, prod: { food: 3, ore: 4 } },
   mountains: { name: 'Mountains', color: '#847a6d', move: 3, def: 1.5, prod: { ore: 4, silver: 1 } },
   arctic:    { name: 'Arctic', color: '#e6edf1', move: 2, prod: {} },
 };
@@ -134,36 +136,42 @@ export const BUILDINGS = {
   townhall:    { name: 'Town Hall', icon: '🏛️', out: 'bells', start: true },
   carpenter:   { name: "Carpenter's House", icon: '🪚', in: 'lumber', out: 'hammers', start: true },
   blacksmith:  { name: "Blacksmith's House", icon: '⚒️', in: 'ore', out: 'tools', start: true },
-  armory:      { name: 'Armory', icon: '🎯', in: 'tools', out: 'muskets', cost: { hammers: 52 }, pop: 1,
+  armory:      { name: 'Armory', icon: '🎯', in: 'tools', out: 'muskets', cost: { hammers: 40 }, pop: 1,
                  desc: 'Turns tools into muskets.' },
   distiller:   { name: "Distiller's House", icon: '🥃', in: 'sugar', out: 'rum', start: true },
   tobacconist: { name: "Tobacconist's House", icon: '🚬', in: 'tobacco', out: 'cigars', start: true },
   weaver:      { name: "Weaver's House", icon: '🧵', in: 'cotton', out: 'cloth', start: true },
   furtrader:   { name: "Fur Trader's House", icon: '🧥', in: 'furs', out: 'coats', start: true },
   chapel:      { name: 'Chapel', icon: '⛪', crosses: 1, start: true },
-  docks:       { name: 'Docks', icon: '⚓', cost: { hammers: 52 }, pop: 1, coastal: true,
+  docks:       { name: 'Docks', icon: '⚓', cost: { hammers: 32 }, pop: 1, coastal: true,
                  desc: 'Colonists can fish on ocean tiles.' },
-  warehouse:   { name: 'Warehouse', icon: '📦', cost: { hammers: 80 }, pop: 1, storage: 100,
+  warehouse:   { name: 'Warehouse', icon: '📦', cost: { hammers: 48 }, pop: 1, storage: 100,
                  desc: 'Store 200 of each good.' },
-  lumbermill:  { name: 'Lumber Mill', icon: '🏭', cost: { hammers: 52 }, pop: 3, boost: 'carpenter',
+  lumbermill:  { name: 'Lumber Mill', icon: '🏭', cost: { hammers: 40 }, pop: 3, boost: 'carpenter',
                  desc: '+50% hammers.' },
-  printing:    { name: 'Printing Press', icon: '📰', cost: { hammers: 52, tools: 20 }, pop: 1, boost: 'townhall',
+  printing:    { name: 'Printing Press', icon: '📰', cost: { hammers: 40, tools: 20 }, pop: 1, boost: 'townhall',
                  desc: '+50% liberty bells.' },
-  church:      { name: 'Church', icon: '💒', cost: { hammers: 64 }, pop: 3, crosses: 2,
+  church:      { name: 'Church', icon: '💒', cost: { hammers: 48 }, pop: 3, crosses: 2,
                  desc: 'More immigrants arrive from Europe.' },
-  stockade:    { name: 'Stockade', icon: '🧱', cost: { hammers: 64 }, pop: 3, defense: 1.0,
+  stockade:    { name: 'Stockade', icon: '🧱', cost: { hammers: 48 }, pop: 3, defense: 1.0,
                  desc: '+100% defence for the colony.' },
-  fort:        { name: 'Fort', icon: '🏰', cost: { hammers: 120, tools: 100 }, pop: 4, requires: 'stockade',
+  fort:        { name: 'Fort', icon: '🏰', cost: { hammers: 96, tools: 60 }, pop: 4, requires: 'stockade',
                  defense: 1.5, desc: '+150% defence for the colony.' },
 };
 
 export const BUILDABLE_UNITS = {
-  wagon: { cost: { hammers: 40 }, pop: 1, desc: 'Carries goods over land, for colonies away from the sea.' },
+  wagon: { cost: { hammers: 32 }, pop: 1, desc: 'Carries goods over land, for colonies away from the sea.' },
   artillery: { cost: { hammers: 192, tools: 40 }, pop: 1, requires: 'armory', desc: 'Strong attacker, weak in the open.' },
 };
 
 // Preferred order when a colony picks its next project on its own.
 export const BUILD_PRIORITY = ['docks', 'warehouse', 'stockade', 'lumbermill', 'printing', 'armory', 'church', 'fort'];
+
+// What native villages pay per unit, tax free. They value tools, muskets, horses and cloth most.
+export const NATIVE_PRICES = {
+  food: 1, sugar: 2, tobacco: 2, cotton: 2, furs: 2, lumber: 1, ore: 2, silver: 8,
+  horses: 4, rum: 6, cigars: 6, cloth: 7, coats: 5, tools: 4, muskets: 6,
+};
 
 export const TRIBES = ['Arawak', 'Tupi', 'Cherokee', 'Iroquois', 'Sioux', 'Apache', 'Aztec', 'Inca'];
 

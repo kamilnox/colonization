@@ -21,7 +21,8 @@ export const HELP_HTML = `
   <p><b>Coast or inland.</b> Ships can only dock at colonies right next to the sea. An inland colony needs a 🐂 Wagon Train (build it under Construction) to carry its goods to a coastal colony.</p>
   <p><b>Building.</b> Colonists in the Carpenter's House turn lumber into hammers 🔨, which build docks, stockades and more. Lumber comes from colonists working forest tiles.</p>
   <p><b>Trade.</b> Load goods from the warehouse onto a ship, sail to Europe and sell them. Buy tools, muskets and horses, recruit colonists, or train experts. Watch out for the King's taxes.</p>
-  <p><b>Experts</b> produce double. Free colonists can learn a skill at a native village 🛖. Scouts 🤠 talk to chiefs and explore lost city rumours ❓.</p>
+  <p><b>Native villages 🛖</b> are friendly neighbours. Walk a Free Colonist in to learn their skill (experts produce double). A scout 🤠 can meet the chief for gold or maps. Bring goods next to a village by wagon train or ship and they buy them for gold, tax free. They also send food to colonies nearby. Tap a village to see what it offers.</p>
+  <p><b>Ruins ❓</b> hide treasure, maps or survivors. Scouts get the best results.</p>
   <p><b>Pioneers</b> 👷 clear forests, plow fields (+1 food) and build roads.</p>
   <p><b>Liberty.</b> Colonists in the Town Hall make liberty bells 🔔. At ${DECLARE_AT}% rebels overall you can declare independence (☰ menu). Then the King sends his army: keep soldiers in your colonies, build stockades and fight back!</p>
   </div>`;

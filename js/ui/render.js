@@ -328,8 +328,8 @@ function drawUnit(u, cx, cy, ts, { small = false, count = 1, selected = false, r
   }
 }
 
-const RING = { attack: '#ff5a4a', visit: '#ffd34d', explore: '#ffd34d', board: '#5ab0ff' };
-const RING_ICON = { attack: '⚔️', visit: '💬', explore: '🔍', board: '⛵' };
+const RING = { attack: '#ff5a4a', visit: '#ffd34d', explore: '#ffd34d', board: '#5ab0ff', trade: '#ffd34d' };
+const RING_ICON = { attack: '⚔️', visit: '💬', explore: '🔍', board: '⛵', trade: '💰' };
 
 // Bright tiles: where the selected unit can go this turn.
 function drawReach(ox, oy, ts, visible) {

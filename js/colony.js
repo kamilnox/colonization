@@ -1,7 +1,7 @@
 // Colonies: founding, jobs, production and what gets built.
 import {
   TERRAIN, BONUS, SKILLS, BUILDINGS, BUILDABLE_UNITS, BUILD_PRIORITY, GOOD_KEYS, GOODS, UNIT_TYPES,
-  LIBERTY_PER_REBEL, FOOD_TO_GROW, BASE_STORAGE, COLONY_NAMES, PIONEER_TOOLS, iconOf, nameOf,
+  LIBERTY_PER_REBEL, FOOD_TO_GROW, BASE_STORAGE, COLONY_NAMES, PIONEER_TOOLS, CENTER_FOOD_BONUS, iconOf, nameOf,
 } from './data.js';
 import {
   S, tile, isWater, inMap, neighbors, unitsAt, reveal, notify, isCoastal, playerColonies, rnd,
@@ -137,11 +137,11 @@ export function computeColony(c) {
   const add = (o, g, n) => { if (n) o[g] = (o[g] || 0) + n; };
 
   const ct = tile(c.x, c.y);
-  const food = tileYield(ct, 'food');
-  add(prod, 'food', food ? food + bonus : 0);
+  const food = tileYield(ct, 'food') + CENTER_FOOD_BONUS;
+  add(prod, 'food', food + bonus);
   const sec = centerSecondary(ct);
   if (sec) add(prod, sec.good, sec.n + bonus);
-  const center = { food: food ? food + bonus : 0, sec: sec ? { good: sec.good, n: sec.n + bonus } : null };
+  const center = { food: food + bonus, sec: sec ? { good: sec.good, n: sec.n + bonus } : null };
 
   for (const w of ws) {
     if (!w.job || w.job.kind !== 'tile') continue;
@@ -353,12 +353,12 @@ export function processColony(c) {
 // Natives sometimes bring gifts to nearby colonies.
 export function nativeGifts() {
   for (const v of S.villages) {
-    if (Math.random() > 0.015) continue;
+    if (Math.random() > 0.035) continue;
     const near = playerColonies().filter(c => Math.max(Math.abs(c.x - v.x), Math.abs(c.y - v.y)) <= 6);
     if (!near.length) continue;
     const c = near[rnd(near.length)];
-    const g = ['food', 'furs', 'cotton', 'tobacco', 'sugar'][rnd(5)];
-    const n = 20 + rnd(41);
+    const g = ['food', 'food', 'food', 'furs', 'cotton', 'tobacco', 'sugar'][rnd(7)];
+    const n = 30 + rnd(41);
     addGoods(c, g, n);
     notify(`The ${v.tribe} bring a gift of ${n} ${nameOf(g).toLowerCase()} ${iconOf(g)} to ${c.name}.`, { kind: 'good' });
   }

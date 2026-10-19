@@ -100,7 +100,7 @@ async function beginNewGame() {
   saveGame();
   const v = await modal({
     title: 'The New World, 1492',
-    html: `<p>The King has granted you a charter to settle the New World. Your caravel carries a veteran soldier and a hardy pioneer. Sail west, find good land and found your first colony.</p>
+    html: `<p>The King has granted you a charter to settle the New World. Your ship carries a veteran soldier, a hardy pioneer, an expert farmer and a free colonist. Sail west, find good land and found your first colony.</p>
       <p><b>How it works:</b> the selected unit has a yellow ring. The bright tiles show where it can go this turn: tap one to move. Units with a green dot still need orders, and they are listed in the <b>Waiting</b> row at the bottom.</p>
       <p>Not sure what to do? The 🎯 line at the top always suggests the next step. Tap it for details.</p>`,
     buttons: [{ label: 'How to play', value: 'help' }, { label: 'Set sail!', value: true, primary: true }],

@@ -21,10 +21,11 @@ export function newGame(seed = Math.floor(Math.random() * 2 ** 31)) {
   });
   S.player.pool = [randomRecruit(), randomRecruit(), randomRecruit()];
   const { x, y } = map.start;
-  const ship = makeUnit('caravel', { x, y });
+  const ship = makeUnit('merchantman', { x, y });
   makeUnit('colonist', { skill: 'veteran', role: 'soldier', where: 'ship', carrier: ship.id });
   makeUnit('colonist', { skill: 'pioneer', role: 'pioneer', tools: 100, where: 'ship', carrier: ship.id });
-  makeUnit('colonist', { where: 'europe' });
+  makeUnit('colonist', { skill: 'farmer', where: 'ship', carrier: ship.id });
+  makeUnit('colonist', { where: 'ship', carrier: ship.id });
   reveal(x, y, 4);
   return S;
 }

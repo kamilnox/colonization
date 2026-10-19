@@ -1,7 +1,7 @@
 // A* route finding on the 8-connected tile grid.
 import { S, unitPos, inMap, tile, isWater, explored, colonyAt, unitsAt } from './state.js';
 import { pathCost, moveCost, enemyAt } from './movement.js';
-import { maxMoves, isNaval, isPerson, freeSlots } from './units.js';
+import { maxMoves, isNaval, isPerson, hasHold, goodsSlots, freeSlots } from './units.js';
 import { attackStrength } from './combat.js';
 import { DIRS8 } from './mapgen.js';
 
@@ -104,6 +104,7 @@ function stepKind(u, x, y, fromStart) {
     if (!fromStart || isNaval(u) || u.where !== 'map' || isWater(t)) return null;
     return !enemy || attackStrength(u) > 0 ? 'attack' : null;
   }
+  if (t.village != null && hasHold(u)) return fromStart && goodsSlots(u.goods) ? 'trade' : null;
   if (isNaval(u)) {
     if (c) return 'enter';
     return isWater(t) ? 'move' : null;
@@ -141,7 +142,7 @@ export function reachable(u) {
       if (j === s) continue;
       const kind = stepKind(u, nx, ny, i === s);
       if (!kind) continue;
-      if (kind === 'attack' || kind === 'board' || kind === 'visit') {
+      if (kind === 'attack' || kind === 'board' || kind === 'visit' || kind === 'trade') {
         if (!out.has(j)) out.set(j, { x: nx, y: ny, kind, prev: i });
         continue;
       }

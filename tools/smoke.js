@@ -20,7 +20,7 @@ function playGame(seed) {
   newGame(seed);
   S.explored.fill(1);
   const ship = S.units.find(isNaval);
-  assert(cargoUnits(ship).length === 2, 'starting ship carries two units');
+  assert(cargoUnits(ship).length === 4, 'starting ship carries four colonists');
   assert(S.villages.length > 5, 'villages generated');
   assert(tile(ship.x, ship.y).highSeas, 'ship starts on high seas');
 
@@ -63,6 +63,19 @@ function playGame(seed) {
     !isWater(tile(a, b)) && tile(a, b).village == null && tile(a, b).colony == null && !tile(a, b).rumor);
   if (road) assert(tryMove(wagon, ...road).ok, 'wagon moves over land');
   c.build = savedBuild;
+
+  // Natives buy the wagon's goods.
+  const v = S.villages[0];
+  const spot = neighbors(v.x, v.y).find(([a, b]) => !isWater(tile(a, b)) && tile(a, b).village == null);
+  if (spot) {
+    Object.assign(wagon, { x: spot[0], y: spot[1], moves: 6, goods: { tools: 100 } });
+    const gold = S.player.gold;
+    assert(tryMove(wagon, v.x, v.y).ok, 'trade with natives');
+    assert(S.player.gold > gold && !Object.keys(wagon.goods).length, 'natives paid for the goods');
+    wagon.goods = { furs: 10 };
+    wagon.moves = 6;
+    assert(!tryMove(wagon, v.x, v.y).ok, 'village needs time before trading again');
+  }
 
   // Trade a little in Europe.
   ship.goods.furs = 100;

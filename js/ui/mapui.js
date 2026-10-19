@@ -4,7 +4,7 @@ import { S, hooks, tile, unitsAt, colonyAt, unitPos, inMap, explored, unitById, 
 import { ui, refresh, openScreen, esc } from './ctx.js';
 import { centerOn } from './render.js';
 import { toast, modal, choose, confirm } from './dialogs.js';
-import { tryMove, workOptions, startWork, runPath, pathCost, enemyAt } from '../movement.js';
+import { tryMove, workOptions, startWork, runPath, pathCost, enemyAt, tradeWait } from '../movement.js';
 import { findPath, pathTurns, reachable, routeTo } from '../path.js';
 import { canFound, foundColony, joinColony, tileYield, tileGoods } from '../colony.js';
 import { unitName, unitIcon, unitBadge, isNaval, isPerson, isMilitary, hasHold, cargoUnits, freeSlots } from '../units.js';
@@ -198,6 +198,21 @@ function toEurope(ship) {
 function tileInfo(x, y) {
   if (!explored(x, y)) return { title: 'Unexplored', lines: ['Nobody knows what lies here yet.'] };
   const t = tile(x, y);
+  if (t.village != null) {
+    const v = S.villages[t.village];
+    const skill = SKILLS[v.skill].name;
+    const wait = tradeWait(v);
+    const lines = [];
+    lines.push('Friendly natives. They send food and other gifts to colonies nearby.');
+    lines.push(v.taught
+      ? `🎓 They already taught their skill (${skill}).`
+      : `🎓 Walk a Free Colonist in and they teach it to be ${/^[AEIOU]/.test(skill) ? 'an' : 'a'} ${skill}.`);
+    lines.push(v.spoken ? '💬 Your scout already met the chief.' : '💬 Send a scout 🤠 to meet the chief for gold or maps.');
+    lines.push(wait
+      ? `💰 They can trade again in ${wait} turn${wait > 1 ? 's' : ''}.`
+      : '💰 Bring goods next to it by wagon train or ship: they buy everything for gold, tax free.');
+    return { title: `🛖 ${v.tribe} village`, lines };
+  }
   const yields = tileGoods(t).filter(g => tileYield(t, g) > 0).map(g => `${iconOf(g)}${tileYield(t, g)}`).join(' ');
   const lines = [];
   if (yields) lines.push(`A colonist working here makes: ${yields}`);
@@ -208,10 +223,6 @@ function tileInfo(x, y) {
   if (t.plowed) extras.push('Plowed');
   if (t.rumor) extras.push('❓ Rumours of a lost city: send a unit to explore');
   if (extras.length) lines.push(extras.join(' · '));
-  if (t.village != null) {
-    const v = S.villages[t.village];
-    lines.push(`🛖 ${v.tribe} village. Teaches ${SKILLS[v.skill].name}${v.taught ? ' (already taught)' : ''} to a free colonist. Scouts can talk to the chief.`);
-  }
   const c = colonyAt(x, y);
   if (c) lines.push(`🏘️ ${c.name}${c.owner === 'player' ? '' : ' (held by the King)'}`);
   return { title: terrainName(x, y) + (TERRAIN[t.terrain].move > 1 || t.forest ? ' (slow to cross)' : ''), lines };

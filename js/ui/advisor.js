@@ -1,6 +1,6 @@
 // The goal banner: looks at the game and suggests one sensible next step.
-import { GOODS, GOOD_KEYS, DECLARE_AT } from '../data.js';
-import { S, playerColonies, dist } from '../state.js';
+import { GOODS, GOOD_KEYS, DECLARE_AT, SKILLS } from '../data.js';
+import { S, playerColonies, dist, explored } from '../state.js';
 import { isNaval, isPerson, cargoUnits, unitName } from '../units.js';
 import { workers, computeColony, rebelPercent, buildingWorkers, colonyCoastal } from '../colony.js';
 import { canLandFrom } from '../movement.js';
@@ -8,6 +8,15 @@ import { refRemaining, refOnMap } from '../ai.js';
 import { needsOrders } from '../game.js';
 
 const SELLABLE = GOOD_KEYS.filter(g => !['food', 'horses', 'tools', 'muskets'].includes(g));
+
+function nearestVillage(u, ok) {
+  let best = null;
+  for (const v of S.villages) {
+    if (!explored(v.x, v.y) || !ok(v)) continue;
+    if (!best || dist(v, u) < dist(best, u)) best = v;
+  }
+  return best;
+}
 
 // Returns { icon, text, more?, focus? } where focus is { unit } | { colony } | { europe }.
 export function advice() {
@@ -93,6 +102,26 @@ export function advice() {
       more: 'The carpenter turns lumber into hammers, and hammers build docks, stockades and more. Lumber comes from colonists working forest tiles.',
       focus: { colony: c0.id },
     };
+  }
+
+  // Natives teach a free colonist standing around for nothing.
+  const learner = mine.find(u => u.where === 'map' && u.role === 'none' && ['free', 'servant'].includes(u.skill));
+  if (learner) {
+    const v = nearestVillage(learner, k => !k.taught);
+    if (v && dist(v, learner) <= 10) {
+      return {
+        icon: '🎓', text: `Walk your ${unitName(learner)} into the ${v.tribe} village nearby: they will teach it to be ${SKILLS[v.skill].name}.`,
+        more: 'Experts produce twice as much. Each village teaches its skill once.',
+        focus: { unit: learner.id },
+      };
+    }
+  }
+  const scout = mine.find(u => u.where === 'map' && u.role === 'scout');
+  if (scout) {
+    const v = nearestVillage(scout, k => !k.spoken);
+    if (v && dist(v, scout) <= 12) {
+      return { icon: '🤠', text: `Ride your scout into the ${v.tribe} village to meet the chief: gifts of gold or maps.`, focus: { unit: scout.id } };
+    }
   }
 
   const pioneer = mine.find(u => u.role === 'pioneer' && u.where === 'map' && !u.work && u.state === 'active' &&
