@@ -18,6 +18,8 @@ export function loadGame() {
     if (!raw) return null;
     const data = JSON.parse(raw);
     data.explored = Uint8Array.from(data.explored, ch => (ch === '1' ? 1 : 0));
+    // Older saves put passengers to sleep; now they stay awake so they show up as waiting.
+    for (const u of data.units) if (u.where === 'ship' && u.state === 'sentry') u.state = 'active';
     return data;
   } catch (e) {
     console.warn('Load failed', e);

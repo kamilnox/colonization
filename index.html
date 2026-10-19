@@ -20,11 +20,17 @@
     <canvas id="map" aria-label="Map"></canvas>
 
     <header id="hud">
-      <button class="hud-btn" data-act="menu" aria-label="Menu">☰</button>
-      <span class="hud-stat" id="hud-gold">💰 0</span>
-      <span class="hud-stat" id="hud-date">1492</span>
-      <span class="hud-stat" id="hud-lib">🔔 0%</span>
-      <button class="hud-btn" id="hud-europe" data-act="europe">⚓ Europe</button>
+      <div class="hud-row">
+        <button class="hud-btn" data-act="menu" aria-label="Menu">☰</button>
+        <div class="hud-stats">
+          <span id="hud-gold">💰 0</span>
+          <span id="hud-date">1492</span>
+          <span id="hud-lib">🔔 0%</span>
+        </div>
+        <button class="hud-btn" data-act="units" aria-label="Units">👥<span class="lbl"> Units</span></button>
+        <button class="hud-btn" id="hud-europe" data-act="europe" aria-label="Europe">⚓<span class="lbl"> Europe</span></button>
+      </div>
+      <button id="goal" data-act="goal"></button>
     </header>
     <button id="update" hidden>A new version is ready. Tap to update.</button>
 

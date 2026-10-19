@@ -2,8 +2,9 @@
 import { TILE, TERRAIN, BONUS } from '../data.js';
 import { S, tile, isWater, explored, inMap, unitPos } from '../state.js';
 import { hash2 } from '../rng.js';
-import { unitIcon, unitBadge, isNaval, isMilitary } from '../units.js';
+import { unitIcon, unitBadge, isNaval, isMilitary, cargoUnits } from '../units.js';
 import { workers } from '../colony.js';
+import { needsOrders } from '../game.js';
 import { ui } from './ctx.js';
 
 export const camera = { x: 0, y: 0, z: 1 };
@@ -274,8 +275,8 @@ function label(text, cx, y, size, bg) {
   ctx.fillText(text, cx, y + h / 2 + 0.5);
 }
 
-function drawUnit(u, cx, cy, ts, { small = false, count = 1, selected = false } = {}) {
-  const r = ts * (small ? 0.24 : 0.36);
+function drawUnit(u, cx, cy, ts, { small = false, count = 1, selected = false, ready = false } = {}) {
+  const r = ts * (small ? 0.26 : 0.36);
   ctx.globalAlpha = u.owner === 'player' && u.moves <= 0 && !selected ? 0.6 : 1;
   ctx.fillStyle = OWNER_COLOR[u.owner] || '#777';
   ctx.beginPath();
@@ -302,12 +303,61 @@ function drawUnit(u, cx, cy, ts, { small = false, count = 1, selected = false } 
     ctx.textBaseline = 'middle';
     ctx.fillText(String(count), bx, by + 0.5);
   }
+  const passengers = isNaval(u) ? cargoUnits(u).length : 0;
+  if (passengers && ts > 28) {
+    label(`👥${passengers}`, cx, cy + r * 0.75, Math.max(9, Math.round(ts * 0.17)), 'rgba(0,0,0,0.75)');
+  }
+  // Green dot: this unit (or one in the stack) still needs orders this turn.
+  if (ready) {
+    ctx.fillStyle = '#4ade80';
+    ctx.strokeStyle = '#0b2e17';
+    ctx.lineWidth = Math.max(1, ts * 0.03);
+    ctx.beginPath();
+    ctx.arc(cx - r * 0.8, cy - r * 0.8, Math.max(3.5, r * 0.26), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
   if (selected) {
     ctx.strokeStyle = '#ffd34d';
-    ctx.lineWidth = Math.max(2, ts * 0.06);
+    ctx.lineWidth = Math.max(2.5, ts * 0.07);
     ctx.beginPath();
-    ctx.arc(cx, cy, r + ts * 0.06, 0, Math.PI * 2);
+    ctx.arc(cx, cy, r + ts * 0.07, 0, Math.PI * 2);
     ctx.stroke();
+  }
+}
+
+const RING = { attack: '#ff5a4a', visit: '#ffd34d', explore: '#ffd34d', board: '#5ab0ff' };
+const RING_ICON = { attack: '⚔️', visit: '💬', explore: '🔍', board: '⛵' };
+
+// Bright tiles: where the selected unit can go this turn.
+function drawReach(ox, oy, ts, visible) {
+  if (!ui.reach) return;
+  const pad = Math.max(1.5, ts * 0.05);
+  for (const r of ui.reach.values()) {
+    if (!visible(r.x, r.y) || RING[r.kind]) continue;
+    const px = ox + r.x * ts, py = oy + r.y * ts;
+    ctx.fillStyle = 'rgba(255,255,255,0.28)';
+    ctx.fillRect(px + pad, py + pad, ts - 2 * pad, ts - 2 * pad);
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+    ctx.lineWidth = Math.max(1, ts * 0.025);
+    ctx.strokeRect(px + pad, py + pad, ts - 2 * pad, ts - 2 * pad);
+  }
+}
+
+// Rings for things the selected unit can act on: attack, talk, explore, board.
+function drawTargets(ox, oy, ts, visible) {
+  if (!ui.reach) return;
+  for (const r of ui.reach.values()) {
+    if (!visible(r.x, r.y) || !RING[r.kind]) continue;
+    const cx = ox + (r.x + 0.5) * ts, cy = oy + (r.y + 0.5) * ts;
+    ctx.strokeStyle = RING[r.kind];
+    ctx.lineWidth = Math.max(2.5, ts * 0.07);
+    ctx.setLineDash([ts * 0.12, ts * 0.08]);
+    ctx.beginPath();
+    ctx.arc(cx, cy, ts * 0.44, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    if (ts > 28) drawGlyph(ctx, RING_ICON[r.kind], cx + ts * 0.32, cy - ts * 0.32, ts * 0.26);
   }
 }
 
@@ -372,13 +422,15 @@ function draw() {
     }
   }
 
+  drawReach(ox, oy, ts, visible);
+
   // Colonies.
   for (const c of S.colonies) {
     if (!visible(c.x, c.y)) continue;
     const cx = ox + (c.x + 0.5) * ts, cy = oy + (c.y + 0.5) * ts;
     drawGlyph(ctx, c.owner === 'player' ? '🏘️' : '🏚️', cx, cy - ts * 0.06, ts * 0.72);
     const size = Math.max(9, Math.round(ts * 0.2));
-    label(`${c.name} ${workers(c).length}`, cx, oy + (c.y + 0.8) * ts, size, c.owner === 'player' ? 'rgba(30,70,150,0.92)' : 'rgba(170,40,30,0.92)');
+    label(`${c.name} 👥${workers(c).length}`, cx, oy + (c.y + 0.8) * ts, size, c.owner === 'player' ? 'rgba(30,70,150,0.92)' : 'rgba(170,40,30,0.92)');
   }
 
   // Units, one stack per tile.
@@ -393,9 +445,12 @@ function draw() {
     const top = list.reduce((a, b) => (unitPriority(b, ui.selected) > unitPriority(a, ui.selected) ? b : a));
     const inColony = tile(top.x, top.y).colony != null;
     const cx = ox + (top.x + 0.5) * ts, cy = oy + (top.y + 0.5) * ts;
-    if (inColony) drawUnit(top, cx + ts * 0.3, cy - ts * 0.28, ts, { small: true, count: list.length, selected: top.id === ui.selected });
-    else drawUnit(top, cx, cy, ts, { count: list.length, selected: top.id === ui.selected });
+    const ready = list.some(u => needsOrders(u) || (isNaval(u) && cargoUnits(u).some(p => needsOrders(p))));
+    const opts = { count: list.length, selected: top.id === ui.selected, ready };
+    if (inColony) drawUnit(top, cx + ts * 0.3, cy - ts * 0.28, ts, { ...opts, small: true });
+    else drawUnit(top, cx, cy, ts, opts);
   }
+  drawTargets(ox, oy, ts, visible);
 
   // Selected unit that is not drawn on its own (aboard a ship or behind another unit).
   const sel = ui.selected != null && S.units.find(u => u.id === ui.selected);

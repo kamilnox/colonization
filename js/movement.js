@@ -1,7 +1,7 @@
 // Moving units around the map, plus everything that can happen when they arrive somewhere.
 import { TERRAIN, SKILLS } from './data.js';
 import {
-  S, tile, inMap, isWater, explored, colonyAt, unitsAt, unitPos, reveal, notify, between, dist,
+  S, tile, inMap, isWater, explored, colonyAt, unitsAt, unitPos, reveal, notify, between, dist, neighbors,
 } from './state.js';
 import {
   isPerson, isNaval, maxMoves, sight, unitName, freeSlots, board, makeUnit, removeUnit, setRole,
@@ -93,6 +93,16 @@ function step(u, x, y) {
     return ok({ stop: true });
   }
   return ok();
+}
+
+// True when passengers can step off: the ship is in a colony or next to open land.
+export function canLandFrom(ship) {
+  if (ship.where !== 'map') return false;
+  if (tile(ship.x, ship.y).colony != null) return true;
+  return neighbors(ship.x, ship.y).some(([x, y]) => {
+    const t = tile(x, y);
+    return !isWater(t) && t.village == null && !enemyAt(ship, x, y);
+  });
 }
 
 // Follow a planned route as far as this turn's moves allow.

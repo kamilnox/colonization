@@ -12,14 +12,17 @@ import { BUILD } from '../build.js';
 export const HELP_HTML = `
   <div class="help">
   <p><b>Goal.</b> Found colonies in the New World, grow them, win your colonists over to the cause of liberty, then declare independence and defeat the King's army.</p>
-  <p><b>Moving.</b> Tap a unit to select it. Tap a neighbouring tile to move there. Tap a tile further away to see a route, then tap it again (or ▶ Go) to follow it. Drag to look around, pinch to zoom.</p>
-  <p><b>Ships.</b> Your ship carries units and goods. Tap the land next to it with a unit aboard selected to go ashore. Ships on dark blue <i>high seas</i> can sail to Europe (3 turns each way).</p>
-  <p><b>Colonies.</b> Any colonist can found a colony (🏠). Open it by tapping it. Tap a colonist, then a field or building, to change their job. Each colonist eats 2 food. 200 stored food grows a new colonist.</p>
-  <p><b>Building.</b> Colonists in the Carpenter's House turn lumber into hammers 🔨, which build docks, stockades and more. Lumberjacks cut lumber in forests.</p>
+  <p><b>🎯 Not sure what to do?</b> The line at the top always suggests a next step. Tap it for details and a <i>Show me</i> button.</p>
+  <p><b>Each turn.</b> Units that can still act have a <b style="color:#4ade80">green dot</b> and are listed in the <b>Waiting</b> row at the bottom. Tap one to select it (yellow ring). When nobody is waiting, tap <b>End turn</b>.</p>
+  <p><b>Moving.</b> Bright tiles show where the selected unit can go this turn: tap one. Rings mean actions: red ⚔️ attack, gold 💬 talk to a village or 🔍 explore ruins, blue ⛵ board a ship. Tap a tile further away to plan a longer trip, then tap Go. Drag to look around, pinch to zoom.</p>
+  <p><b>👥 Units</b> (top right) lists everyone: who is on the map, on a ship, working in a colony or waiting in Europe. Tap a name to jump to it.</p>
+  <p><b>Ships.</b> Passengers show up in the Waiting row when the ship is next to land: tap one, then a bright land tile. Ships on the dark blue <i>high seas</i> can sail to Europe (3 turns each way).</p>
+  <p><b>Colonies.</b> Any colonist on land can found one (🏠). A unit standing on the colony tile is <i>outside</i> and not working: tap <i>Work in ...</i> to put it to work. In the colony screen, tap a colonist, then a green field or building. Each colonist eats 2 food; 200 stored food grows a new colonist.</p>
+  <p><b>Building.</b> Colonists in the Carpenter's House turn lumber into hammers 🔨, which build docks, stockades and more. Lumber comes from colonists working forest tiles.</p>
   <p><b>Trade.</b> Load goods from the warehouse onto a ship, sail to Europe and sell them. Buy tools, muskets and horses, recruit colonists, or train experts. Watch out for the King's taxes.</p>
-  <p><b>Experts</b> produce double. Free colonists can learn a skill by visiting a native village 🛖. Scouts 🤠 can speak to chiefs and explore lost city rumours ❓.</p>
+  <p><b>Experts</b> produce double. Free colonists can learn a skill at a native village 🛖. Scouts 🤠 talk to chiefs and explore lost city rumours ❓.</p>
   <p><b>Pioneers</b> 👷 clear forests, plow fields (+1 food) and build roads.</p>
-  <p><b>Liberty.</b> Colonists in the Town Hall make liberty bells 🔔. At ${DECLARE_AT}% rebels overall you can declare independence (☰ menu). Then the King sends his army: put soldiers in your colonies, build stockades and fight back!</p>
+  <p><b>Liberty.</b> Colonists in the Town Hall make liberty bells 🔔. At ${DECLARE_AT}% rebels overall you can declare independence (☰ menu). Then the King sends his army: keep soldiers in your colonies, build stockades and fight back!</p>
   </div>`;
 
 function coloniesList() {

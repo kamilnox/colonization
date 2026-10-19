@@ -85,7 +85,7 @@ export function addCargo(ship, g, n) {
 }
 
 export function board(u, ship) {
-  Object.assign(u, { where: 'ship', carrier: ship.id, colony: null, job: null, path: null, state: 'sentry', moves: 0 });
+  Object.assign(u, { where: 'ship', carrier: ship.id, colony: null, job: null, path: null, state: 'active', moves: 0 });
 }
 
 // --- equipment ---

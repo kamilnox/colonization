@@ -1,7 +1,8 @@
 // A* route finding on the 8-connected tile grid.
-import { S, unitPos } from './state.js';
-import { pathCost } from './movement.js';
-import { maxMoves } from './units.js';
+import { S, unitPos, inMap, tile, isWater, explored, colonyAt, unitsAt } from './state.js';
+import { pathCost, moveCost, enemyAt } from './movement.js';
+import { maxMoves, isNaval, isPerson, freeSlots } from './units.js';
+import { attackStrength } from './combat.js';
 import { DIRS8 } from './mapgen.js';
 
 class Heap {
@@ -90,4 +91,78 @@ export function pathTurns(u, path) {
     prev = { x, y };
   }
   return turns;
+}
+
+// What stepping from (fx, fy) onto (x, y) would mean for this unit, or null if it can't.
+// 'move' and 'enter' (own colony) let the unit continue; the others end its move.
+function stepKind(u, x, y, fromStart) {
+  if (!explored(x, y)) return null;
+  const t = tile(x, y);
+  const c = colonyAt(x, y);
+  const enemy = enemyAt(u, x, y);
+  if (enemy || (c && c.owner !== u.owner)) {
+    if (!fromStart || isNaval(u) || u.where !== 'map' || isWater(t)) return null;
+    return !enemy || attackStrength(u) > 0 ? 'attack' : null;
+  }
+  if (isNaval(u)) {
+    if (c) return 'enter';
+    return isWater(t) ? 'move' : null;
+  }
+  if (isWater(t)) {
+    if (!fromStart || u.where !== 'map') return null;
+    return unitsAt(x, y).some(s => s.owner === u.owner && isNaval(s) && freeSlots(s) > 0) ? 'board' : null;
+  }
+  if (t.village != null) return isPerson(u) && (u.role === 'scout' || u.role === 'none') ? 'visit' : null;
+  if (c) return 'enter';
+  if (t.rumor) return 'explore';
+  return 'move';
+}
+
+// Everything the unit can reach or act on with the moves it has left this turn.
+// Map of tile index -> { x, y, kind, prev }, where prev is the tile it is reached from.
+export function reachable(u) {
+  const out = new Map();
+  const start = unitPos(u);
+  if (!start || u.owner !== 'player' || u.moves <= 0 || u.work) return out;
+  if (u.where !== 'map' && u.where !== 'ship') return out;
+  const W = S.W, max = maxMoves(u);
+  const s = start.y * W + start.x;
+  const left = new Map([[s, u.moves]]);
+  const open = [s];
+  while (open.length) {
+    let bi = 0;
+    for (let k = 1; k < open.length; k++) if (left.get(open[k]) > left.get(open[bi])) bi = k;
+    const i = open.splice(bi, 1)[0];
+    const x = i % W, y = (i - x) / W, have = left.get(i);
+    for (const [dx, dy] of DIRS8) {
+      const nx = x + dx, ny = y + dy;
+      if (!inMap(nx, ny)) continue;
+      const j = ny * W + nx;
+      if (j === s) continue;
+      const kind = stepKind(u, nx, ny, i === s);
+      if (!kind) continue;
+      if (kind === 'attack' || kind === 'board' || kind === 'visit') {
+        if (!out.has(j)) out.set(j, { x: nx, y: ny, kind, prev: i });
+        continue;
+      }
+      const cost = moveCost(u, x, y, nx, ny);
+      if (have < cost && have < max) continue;
+      const rest = Math.max(0, have - cost);
+      if (left.has(j) && left.get(j) >= rest) continue;
+      left.set(j, rest);
+      out.set(j, { x: nx, y: ny, kind, prev: i });
+      if (rest > 0 && kind !== 'explore') open.push(j);
+    }
+  }
+  return out;
+}
+
+// Steps from the unit to a tile found by reachable().
+export function routeTo(reach, x, y) {
+  const path = [];
+  for (let k = y * S.W + x; reach.has(k); k = reach.get(k).prev) {
+    const r = reach.get(k);
+    path.push([r.x, r.y]);
+  }
+  return path.reverse();
 }

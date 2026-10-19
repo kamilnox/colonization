@@ -8,7 +8,8 @@ const SHELL = [
   'js/colony.js', 'js/combat.js', 'js/movement.js', 'js/path.js', 'js/europe.js', 'js/ai.js',
   'js/game.js', 'js/save.js',
   'js/ui/ctx.js', 'js/ui/render.js', 'js/ui/input.js', 'js/ui/dialogs.js', 'js/ui/mapui.js',
-  'js/ui/colonyScreen.js', 'js/ui/europeScreen.js', 'js/ui/menu.js',
+  'js/ui/colonyScreen.js', 'js/ui/europeScreen.js', 'js/ui/menu.js', 'js/ui/describe.js',
+  'js/ui/advisor.js', 'js/ui/roster.js',
   'icons/icon-192.png', 'icons/apple-touch-icon.png',
 ];
 

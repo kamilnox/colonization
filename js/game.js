@@ -1,11 +1,11 @@
 // Game setup, the end-of-turn sequence and the big decisions (independence, victory, defeat).
 import { START_GOLD, DECLARE_AT } from './data.js';
-import { S, setState, notify, reveal, playerColonies, unitsAt, dateLabel } from './state.js';
+import { S, setState, notify, reveal, playerColonies, unitsAt, unitById, dateLabel } from './state.js';
 import { generateMap } from './mapgen.js';
 import { makeUnit, maxMoves, isNaval, isPerson, isMilitary, removeUnit } from './units.js';
 import { processColony, nativeGifts, workers, rebelPercent, sol } from './colony.js';
 import { initMarket, randomRecruit, immigration, marketTurn, progressSailing, sailToAmerica } from './europe.js';
-import { progressWork, runPath } from './movement.js';
+import { progressWork, runPath, canLandFrom } from './movement.js';
 import { refTurn, refSize, refRemaining, refOnMap } from './ai.js';
 
 export function newGame(seed = Math.floor(Math.random() * 2 ** 31)) {
@@ -22,24 +22,32 @@ export function newGame(seed = Math.floor(Math.random() * 2 ** 31)) {
   S.player.pool = [randomRecruit(), randomRecruit(), randomRecruit()];
   const { x, y } = map.start;
   const ship = makeUnit('caravel', { x, y });
-  makeUnit('colonist', { skill: 'veteran', role: 'soldier', where: 'ship', carrier: ship.id, state: 'sentry' });
-  makeUnit('colonist', { skill: 'pioneer', role: 'pioneer', tools: 100, where: 'ship', carrier: ship.id, state: 'sentry' });
+  makeUnit('colonist', { skill: 'veteran', role: 'soldier', where: 'ship', carrier: ship.id });
+  makeUnit('colonist', { skill: 'pioneer', role: 'pioneer', tools: 100, where: 'ship', carrier: ship.id });
   makeUnit('colonist', { where: 'europe' });
   reveal(x, y, 4);
   return S;
 }
 
-export const needsOrders = (u, ignoreWait = false) =>
-  u.owner === 'player' && u.where === 'map' && u.moves > 0 && u.state === 'active' &&
-  !u.path && !u.work && (ignoreWait || !u.waited);
+// A unit that can still do something this turn and has no standing orders.
+// Passengers count too once their ship is next to land, so they are easy to find.
+// `waited` means the player skipped the unit for this turn.
+export function needsOrders(u, ignoreWait = false) {
+  if (u.owner !== 'player' || u.moves <= 0 || u.state !== 'active' || u.path || u.work) return false;
+  if (u.waited && !ignoreWait) return false;
+  if (u.where === 'map') return true;
+  if (u.where === 'ship') {
+    const ship = unitById(u.carrier);
+    return !!ship && canLandFrom(ship);
+  }
+  return false;
+}
+
+export const waitingUnits = () => S.units.filter(u => needsOrders(u));
 
 // Next unit waiting for orders, cycling after `current`.
 export function nextUnit(current = null) {
-  let list = S.units.filter(u => needsOrders(u));
-  if (!list.length) {
-    list = S.units.filter(u => needsOrders(u, true));
-    list.forEach(u => { u.waited = false; });
-  }
+  const list = waitingUnits();
   if (!list.length) return null;
   return list.find(u => current && u.id > current.id) || list[0];
 }

@@ -35,16 +35,12 @@ function selectionBar(u, c) {
   if (isPerson(u)) {
     if (!inside) btns.push(['join', 'Join colony', '➕']);
     if (inside && workers(c).length > 1) btns.push(['out', 'Move outside', '🚶']);
-    if (u.where === 'map') {
-      const eq = [['soldier', 'Soldier', '💂'], ['dragoon', 'Dragoon', '🏇'], ['scout', 'Scout', '🤠'], ['pioneer', 'Pioneer', '👷']];
-      for (const [role, label, icon] of eq) if (u.role !== role) btns.push([`equip:${role}`, label, icon]);
-      if (u.role !== 'none') btns.push(['equip:none', 'Unequip', '🧑']);
-    }
+    if (u.where === 'map') btns.push(['equip', 'Equip...', '🎒']);
   }
   if (aboard) btns.push(['ashore', 'Go ashore', '⛰️']);
   const ship = ui.colonyShip != null && unitById(ui.colonyShip);
   if (u.where === 'map' && ship && freeSlots(ship) > 0) btns.push(['board', `Board ${unitName(ship)}`, '⛵']);
-  if (u.where === 'map') btns.push(['showmap', 'Orders on map', '🗺️']);
+  if (u.where === 'map') btns.push(['showmap', 'On the map', '🗺️']);
   const job = inside && u.job
     ? (u.job.kind === 'tile' ? `Working a field: ${nameOf(u.job.good)}` : `Working in the ${BUILDINGS[u.job.b].name}`)
     : aboard ? 'Aboard a ship' : 'Outside the colony';
@@ -52,7 +48,7 @@ function selectionBar(u, c) {
     <div class="selbar">
       <div class="selbar-head">
         <span class="selbar-icon">${person(u)}</span>
-        <span class="selbar-text"><b>${esc(unitName(u))}</b><small>${esc(job)}. Tap a field or building to assign.</small></span>
+        <span class="selbar-text"><b>${esc(unitName(u))}</b><small>${esc(job)}. Tap a green field or building.</small></span>
         <button class="icon-btn" data-act="unsel" aria-label="Deselect">✕</button>
       </div>
       ${btns.length ? `<div class="actions">${btns.map(([a, l, i]) => `<button class="btn small" data-act="${a}">${i} ${esc(l)}</button>`).join('')}</div>` : ''}
@@ -86,7 +82,8 @@ function tilesHtml(c, r, sel) {
           if (g) inner = `<span class="out hint">${iconOf(g)}${tileYield(t, g, sel.skill)}</span>`;
         }
       }
-      cells.push(`<button class="cell" data-act="tile" data-x="${x}" data-y="${y}">${inner}</button>`);
+      const can = sel && isPerson(sel) && !(dx === 0 && dy === 0) && canWorkTile(c, x, y, sel) && bestGoodFor(t, sel.skill);
+      cells.push(`<button class="cell${can ? ' can' : ''}" data-act="tile" data-x="${x}" data-y="${y}">${inner}</button>`);
     }
   }
   return `<div class="tiles" id="col-tiles"><canvas></canvas>${cells.join('')}</div>`;
@@ -103,7 +100,7 @@ function productionHtml(c, r) {
   return `<div class="prods">${chips.join('')}</div>`;
 }
 
-function buildingsHtml(c, r) {
+function buildingsHtml(c, r, sel) {
   const cards = [], small = [];
   for (const [b, B] of Object.entries(BUILDINGS)) {
     if (!c.buildings[b]) continue;
@@ -114,13 +111,35 @@ function buildingsHtml(c, r) {
       ? `<button class="slot${ws[i].id === ui.colonySel ? ' sel' : ''}" data-act="unit" data-id="${ws[i].id}">${person(ws[i])}</button>`
       : '<span class="slot empty"></span>')).join('');
     const flow = B.in ? `${iconOf(B.in)} → ${iconOf(B.out)} ${made}` : `${iconOf(B.out)} ${made}`;
+    const can = sel && isPerson(sel) && ws.filter(w => w !== sel).length < 3 && !(sel.job && sel.job.kind === 'bldg' && sel.job.b === b);
     cards.push(`
-      <div class="bldg" data-act="bldg" data-b="${b}">
+      <div class="bldg${can ? ' can' : ''}" data-act="bldg" data-b="${b}">
         <div class="bldg-name">${B.icon} ${esc(B.name)}</div>
         <div class="bldg-row"><div class="slots">${slots}</div><div class="flow">${flow}</div></div>
       </div>`);
   }
   return `<div class="bldgs">${cards.join('')}</div><div class="tags">${small.join('')}</div>`;
+}
+
+// The colony's situation in plain sentences.
+function summaryHtml(c, r, ships, people) {
+  const lines = [];
+  const food = r.net.food || 0;
+  const stock = c.goods.food || 0;
+  if (food > 0) lines.push(['', `🌽 Food +${food} a turn: a new colonist in ${Math.ceil((FOOD_TO_GROW - stock) / food)} turns.`]);
+  else if (food === 0) lines.push(['', '🌽 Food is balanced, so the colony will not grow.']);
+  else lines.push(['bad', `⚠️ Food ${food} a turn: colonists will starve${stock ? ` in ${Math.ceil(stock / -food)} turns` : ' next turn'}. Put someone on a food field.`]);
+  if (c.build) {
+    const cost = buildCost(c.build);
+    const rate = r.prod.hammers || 0;
+    const left = Math.max(0, cost.hammers - c.hammers);
+    if (rate) lines.push(['', `🔨 Building ${buildName(c.build)}: ${left ? `${Math.ceil(left / rate)} turns` : 'done next turn'}.`]);
+    else if (buildingWorkers(c, 'carpenter').length) lines.push(['warn', `🔨 ${buildName(c.build)} is stuck: the carpenter has no lumber. Put someone on a forest tile.`]);
+    else lines.push(['warn', `🔨 ${buildName(c.build)} is waiting for hammers: put a colonist in the Carpenter's House.`]);
+  }
+  if (people.length) lines.push(['', `🚶 ${people.length} waiting outside. Tap one, then a field or building to put it to work.`]);
+  if (ships.length) lines.push(['', `⛵ ${ships.map(unitName).join(', ')} in port. Tap warehouse goods to load them.`]);
+  return `<div class="summary">${lines.map(([cls, l]) => `<p class="${cls}">${esc(l)}</p>`).join('')}</div>`;
 }
 
 function constructionHtml(c, r) {
@@ -194,15 +213,15 @@ function render(el) {
   el.innerHTML = `
     <div class="scr-head">
       <button class="btn" data-act="close">‹ Map</button>
-      <div class="scr-title"><b>${esc(c.name)}</b><span>${workers(c).length} colonists · 🔔 Rebels ${sol(c)}%</span></div>
+      <div class="scr-title"><b>${esc(c.name)}</b><span>👥 ${workers(c).length} working here · 🔔 Rebels ${sol(c)}%</span></div>
     </div>
-    ${sel ? selectionBar(sel, c) : '<div class="hint">Tap a colonist, then tap a field or a building to put them to work. Tap a worked field again to change what it produces.</div>'}
-    ${tilesHtml(c, r, sel)}
-    <section><h3>Production</h3>${productionHtml(c, r)}</section>
-    <section><h3>Buildings</h3>${buildingsHtml(c, r)}</section>
+    ${sel ? selectionBar(sel, c) : summaryHtml(c, r, ships, people)}
+    <section><h3>Fields <small>${sel ? 'green = can work here' : 'tap a colonist to move them'}</small></h3>${tilesHtml(c, r, sel)}</section>
+    <section><h3>Production <small>per turn</small></h3>${productionHtml(c, r)}</section>
+    <section><h3>Buildings <small>${sel ? 'green = room for one more' : 'colonists inside make goods'}</small></h3>${buildingsHtml(c, r, sel)}</section>
     <section><h3>Construction</h3>${constructionHtml(c, r)}</section>
     <section><h3>Warehouse <small>holds ${storageCap(c)} of each${ships.length ? ' · tap goods to load the ship' : ''}</small></h3>${warehouseHtml(c, r)}</section>
-    <section><h3>Outside the colony</h3>${people.length ? `<div class="cargo">${people.map(u => unitChip(u)).join('')}</div>` : '<p class="muted">Nobody.</p>'}</section>
+    <section><h3>Outside the colony <small>not working</small></h3>${people.length ? `<div class="cargo">${people.map(u => unitChip(u)).join('')}</div>` : '<p class="muted">Nobody.</p>'}</section>
     <section><h3>Ships in port</h3>${shipsHtml(ships)}</section>`;
   drawTiles(el, c);
 }
@@ -310,7 +329,10 @@ function onClick(e) {
       ui.colonySel = ui.colonySel === id ? null : id;
       const u = unitById(id);
       if (u && u.where === 'ship') ui.colonyShip = u.carrier;
-      return refresh();
+      refresh();
+      // Back to the top so the fields with the green targets are in view.
+      if (ui.colonySel != null) document.getElementById('screen').scrollTop = 0;
+      return;
     }
     case 'unsel': ui.colonySel = null; return refresh();
     case 'tile': return tapTile(c, Number(b.dataset.x), Number(b.dataset.y));
@@ -366,11 +388,25 @@ function onClick(e) {
       closeScreen();
       return selectUnit(sel);
   }
-  if (act.startsWith('equip:')) {
-    const err = equipFromColony(sel, c, act.slice(6));
-    if (err) toast(err, 'bad');
-    return done();
-  }
+  if (act === 'equip') return equipMenu(sel, c);
+}
+
+const EQUIP = [
+  ['soldier', 'Soldier', '💂', '50 ⚔️ muskets. Defends and attacks.'],
+  ['dragoon', 'Dragoon', '🏇', '50 ⚔️ muskets and 50 🐎 horses. Strong and fast.'],
+  ['scout', 'Scout', '🤠', '50 🐎 horses. Explores, talks to chiefs.'],
+  ['pioneer', 'Pioneer', '👷', '20 to 100 🛠️ tools. Clears forest, plows, builds roads.'],
+  ['none', 'Plain colonist', '🧑', 'Put the equipment back in the warehouse.'],
+];
+
+async function equipMenu(u, c) {
+  const v = await choose(`Equip ${unitName(u)}`, EQUIP.filter(([role]) => role !== u.role).map(([role, label, icon, sub]) => ({
+    value: role, icon, label, sub,
+  })), { text: 'Equipment comes from this colony\'s warehouse.' });
+  if (!v) return;
+  const err = equipFromColony(u, c, v);
+  if (err) toast(err, 'bad');
+  done();
 }
 
 screens.colony = { render, onClick };
