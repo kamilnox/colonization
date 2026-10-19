@@ -4,7 +4,7 @@ import { S, tile, isWater, neighbors, hooks, playerColonies } from '../js/state.
 import { newGame, endTurn, declareIndependence, nextUnit } from '../js/game.js';
 import { findPath } from '../js/path.js';
 import { tryMove, runPath, workOptions, startWork } from '../js/movement.js';
-import { canFound, foundColony, workers, computeColony, joinColony, equipFromColony } from '../js/colony.js';
+import { canFound, foundColony, workers, computeColony, joinColony, equipFromColony, processColony } from '../js/colony.js';
 import { cargoUnits, isNaval } from '../js/units.js';
 import { sellGoods, buyGoods, recruit } from '../js/europe.js';
 import { refRemaining, refOnMap } from '../js/ai.js';
@@ -49,6 +49,20 @@ function playGame(seed) {
     const opts = workOptions(pioneer);
     if (opts.length) startWork(pioneer, opts[0].kind);
   }
+
+  // Wagon train: build one, load goods and drive it somewhere.
+  const savedBuild = c.build;
+  c.build = 'wagon';
+  c.hammers += 40;
+  processColony(c);
+  const wagon = S.units.find(u => u.type === 'wagon');
+  assert(wagon && wagon.goods, 'wagon train built');
+  assert(c.build !== 'wagon', 'colony moves on to another project after the wagon');
+  wagon.goods.furs = 50;
+  const road = neighbors(wagon.x, wagon.y).find(([a, b]) =>
+    !isWater(tile(a, b)) && tile(a, b).village == null && tile(a, b).colony == null && !tile(a, b).rumor);
+  if (road) assert(tryMove(wagon, ...road).ok, 'wagon moves over land');
+  c.build = savedBuild;
 
   // Trade a little in Europe.
   ship.goods.furs = 100;

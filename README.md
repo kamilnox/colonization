@@ -16,6 +16,7 @@ it runs fullscreen like a native app, works offline and keeps your saved game.
 - Europe: sell your goods, buy tools, muskets and horses, recruit colonists, train experts, buy ships
 - Experts produce double, and natives can teach free colonists a skill
 - Pioneers clear forests, plow fields and build roads. Scouts talk to chiefs and explore ruins
+- Wagon trains carry goods over land from inland colonies to the coast
 - Liberty bells, rebel sentiment, declaring independence and fighting the King's army
 - Autosave to the phone, so you can close the app at any time
 

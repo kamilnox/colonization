@@ -1,7 +1,7 @@
 // Plain-language descriptions of where units are and what they are doing.
 import { BUILDINGS, TERRAIN, iconOf } from '../data.js';
 import { tile, colonyAt, unitById, colonyById, isWater } from '../state.js';
-import { unitName, isNaval, cargoUnits } from '../units.js';
+import { unitName, isNaval, hasHold, cargoUnits } from '../units.js';
 
 export function terrainName(x, y) {
   const t = tile(x, y);
@@ -37,7 +37,8 @@ export function whereText(u) {
     case 'sailing': return `Sailing to ${u.sail.to === 'europe' ? 'Europe' : 'the New World'}, ${plural(u.sail.turns, 'turn')} left`;
     default: {
       const c = colonyAt(u.x, u.y);
-      if (c) return isNaval(u) ? `In port at ${c.name}` : `Standing outside ${c.name} (not working there)`;
+      if (c && isNaval(u)) return `In port at ${c.name}`;
+      if (c) return hasHold(u) ? `Parked at ${c.name}` : `Standing outside ${c.name} (not working there)`;
       return `On the map, ${terrainName(u.x, u.y).toLowerCase()}`;
     }
   }

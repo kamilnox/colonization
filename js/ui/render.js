@@ -2,7 +2,7 @@
 import { TILE, TERRAIN, BONUS } from '../data.js';
 import { S, tile, isWater, explored, inMap, unitPos } from '../state.js';
 import { hash2 } from '../rng.js';
-import { unitIcon, unitBadge, isNaval, isMilitary, cargoUnits } from '../units.js';
+import { unitIcon, unitBadge, isNaval, isMilitary, cargoUnits, goodsSlots } from '../units.js';
 import { workers } from '../colony.js';
 import { needsOrders } from '../game.js';
 import { ui } from './ctx.js';
@@ -304,8 +304,10 @@ function drawUnit(u, cx, cy, ts, { small = false, count = 1, selected = false, r
     ctx.fillText(String(count), bx, by + 0.5);
   }
   const passengers = isNaval(u) ? cargoUnits(u).length : 0;
-  if (passengers && ts > 28) {
-    label(`👥${passengers}`, cx, cy + r * 0.75, Math.max(9, Math.round(ts * 0.17)), 'rgba(0,0,0,0.75)');
+  const loads = goodsSlots(u.goods);
+  if ((passengers || loads) && ts > 28) {
+    const text = [passengers ? `👥${passengers}` : '', loads ? `📦${loads}` : ''].filter(Boolean).join(' ');
+    label(text, cx, cy + r * 0.75, Math.max(9, Math.round(ts * 0.17)), 'rgba(0,0,0,0.75)');
   }
   // Green dot: this unit (or one in the stack) still needs orders this turn.
   if (ready) {

@@ -1,13 +1,13 @@
 // Map interaction: who is selected, where it can go, and the bottom panel with its orders.
 import { TERRAIN, BONUS, SKILLS, iconOf } from '../data.js';
-import { S, hooks, tile, unitsAt, colonyAt, unitPos, inMap, explored, unitById, neighbors, dateLabel } from '../state.js';
+import { S, hooks, tile, unitsAt, colonyAt, unitPos, inMap, explored, unitById, neighbors, dateLabel, isCoastal } from '../state.js';
 import { ui, refresh, openScreen, esc } from './ctx.js';
 import { centerOn } from './render.js';
-import { toast, modal, choose } from './dialogs.js';
+import { toast, modal, choose, confirm } from './dialogs.js';
 import { tryMove, workOptions, startWork, runPath, pathCost, enemyAt } from '../movement.js';
 import { findPath, pathTurns, reachable, routeTo } from '../path.js';
 import { canFound, foundColony, joinColony, tileYield, tileGoods } from '../colony.js';
-import { unitName, unitIcon, unitBadge, isNaval, isPerson, isMilitary, cargoUnits, freeSlots } from '../units.js';
+import { unitName, unitIcon, unitBadge, isNaval, isPerson, isMilitary, hasHold, cargoUnits, freeSlots } from '../units.js';
 import { nextUnit, endTurn, needsOrders, waitingUnits } from '../game.js';
 import { sailToEurope } from '../europe.js';
 import { attackOdds } from '../combat.js';
@@ -156,6 +156,18 @@ function go() {
   afterAction(u);
 }
 
+async function foundHere(u) {
+  if (!isCoastal(u.x, u.y)) {
+    const yes = await confirm('Found an inland colony?',
+      'This spot is not next to the sea, so ships will never be able to dock here. Goods would have to go to a coastal colony by wagon train. Found it anyway?',
+      'Found it here');
+    if (!yes) return;
+  }
+  const col = foundColony(u);
+  afterAction(u);
+  openScreen('colony', { colonyId: col.id, colonySel: null });
+}
+
 // Route a ship to the nearest high seas tile and sail on arrival.
 function toEurope(ship) {
   const start = unitPos(ship);
@@ -214,7 +226,8 @@ function hintFor(u) {
   if (u.where === 'ship') parts.push(any ? 'Tap a bright land tile to go ashore.' : 'The ship has to be next to land before you can go ashore.');
   else if (any) parts.push('Tap a bright tile to move. Tap further away for a longer trip.');
   if (isNaval(u) && tile(u.x, u.y).highSeas && !S.player.declared) parts.push('From these dark high seas you can also sail to Europe.');
-  if (canFound(u)) parts.push('Or found a colony right here.');
+  if (hasHold(u) && !isNaval(u)) parts.push('Drive into a colony to load or unload goods.');
+  if (canFound(u)) parts.push(isCoastal(u.x, u.y) ? 'Or found a colony here: on the coast, so ships can dock.' : 'Or found a colony here, but it is inland: ships can not reach it.');
   return parts.join(' ');
 }
 
@@ -250,7 +263,7 @@ function actionsFor(u) {
 }
 
 function cargoHtml(u) {
-  if (!isNaval(u)) return '';
+  if (!hasHold(u)) return '';
   const chips = cargoUnits(u).map(c =>
     `<button class="chip" data-act="select" data-arg="${c.id}">${unitIcon(c)}<small>${esc(unitName(c))}</small></button>`);
   for (const [g, n] of Object.entries(u.goods)) chips.push(`<span class="chip">${iconOf(g)}<small>${n}</small></span>`);
@@ -347,11 +360,7 @@ export function initPanel() {
     const c = pos && colonyAt(pos.x, pos.y);
     switch (b.dataset.act) {
       case 'select-carrier': return selectUnit(unitById(u.carrier), false);
-      case 'found': {
-        const col = foundColony(u);
-        afterAction(u);
-        return openScreen('colony', { colonyId: col.id, colonySel: null });
-      }
+      case 'found': return foundHere(u);
       case 'join':
         joinColony(u, c);
         toast(`${unitName(u)} now works in ${c.name}: ${jobText(u)}.`, 'good');

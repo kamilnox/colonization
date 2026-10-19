@@ -2,7 +2,7 @@
 import { S, unitById, playerColonies } from '../state.js';
 import { screens, closeScreen, openScreen, esc } from './ctx.js';
 import { toast } from './dialogs.js';
-import { unitName, unitIcon, unitBadge, isNaval, cargoUnits } from '../units.js';
+import { unitName, unitIcon, unitBadge, isNaval, hasHold, cargoUnits } from '../units.js';
 import { workers } from '../colony.js';
 import { needsOrders } from '../game.js';
 import { whereText, stateText, jobText, cargoText } from './describe.js';
@@ -26,8 +26,8 @@ function section(title, hint, rows) {
 function render(el) {
   const mine = S.units.filter(u => u.owner === 'player');
   const waiting = mine.filter(u => needsOrders(u, true));
-  const onMap = mine.filter(u => u.where === 'map' && !isNaval(u) && !waiting.includes(u));
-  const ships = mine.filter(isNaval);
+  const onMap = mine.filter(u => u.where === 'map' && !hasHold(u) && !waiting.includes(u));
+  const ships = mine.filter(hasHold);
 
   const shipRows = [];
   for (const s of ships) {
@@ -56,7 +56,7 @@ function render(el) {
     </div>
     ${section('Waiting for orders', 'These can still act this turn.', waiting.map(u => row(u, whereText(u))))}
     ${section('Out on the map', '', onMap.map(u => row(u, [stateText(u), whereText(u)].filter(Boolean).join(' · '))))}
-    ${section('Ships and passengers', '', shipRows)}
+    ${section('Ships and wagons', '', shipRows)}
     ${colonyBlocks.join('')}
     ${section('In Europe', 'Bring them over by ship.', docks.map(u => row(u, whereText(u))))}
     ${mine.length ? '' : '<p class="muted">You have no units left.</p>'}`;

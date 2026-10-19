@@ -2,7 +2,7 @@
 import { GOODS, GOOD_KEYS, DECLARE_AT } from '../data.js';
 import { S, playerColonies, dist } from '../state.js';
 import { isNaval, isPerson, cargoUnits, unitName } from '../units.js';
-import { workers, computeColony, rebelPercent, buildingWorkers } from '../colony.js';
+import { workers, computeColony, rebelPercent, buildingWorkers, colonyCoastal } from '../colony.js';
 import { canLandFrom } from '../movement.js';
 import { refRemaining, refOnMap } from '../ai.js';
 import { needsOrders } from '../game.js';
@@ -105,14 +105,25 @@ export function advice() {
     };
   }
 
+  const wagon = mine.find(u => u.type === 'wagon');
   for (const c of cols) {
     const g = SELLABLE.find(k => (c.goods[k] || 0) >= 90);
-    if (g) {
+    if (!g) continue;
+    const what = `${c.name} has ${c.goods[g]} ${GOODS[g].name.toLowerCase()}.`;
+    if (colonyCoastal(c)) {
+      return { icon: GOODS[g].icon, text: `${what} Load them on a ship and sell them in Europe.`, focus: { colony: c.id } };
+    }
+    if (wagon) {
       return {
-        icon: GOODS[g].icon, text: `${c.name} has ${c.goods[g]} ${GOODS[g].name.toLowerCase()}. Load them on a ship and sell them in Europe.`,
-        focus: { colony: c.id },
+        icon: '🐂', text: `${what} Drive your wagon train there, load them and bring them to a colony on the coast.`,
+        focus: { unit: wagon.id },
       };
     }
+    return {
+      icon: '🐂', text: `${what} It is inland, so build a Wagon Train there to carry goods to the coast.`,
+      more: 'Open the colony, tap Change under Construction and pick Wagon Train. It needs 40 hammers.',
+      focus: { colony: c.id },
+    };
   }
 
   const pop = cols.reduce((s, c) => s + workers(c).length, 0);

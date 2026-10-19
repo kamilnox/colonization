@@ -7,9 +7,9 @@ import { toast, choose } from './dialogs.js';
 import {
   workers, computeColony, canWorkTile, tileYield, tileGoods, bestGoodFor, joinColony, leaveColony,
   equipFromColony, buildOptions, buildCost, buildName, storageCap, sol, colonyUnitsOutside, addGoods,
-  buildingWorkers, tileWorker,
+  buildingWorkers, tileWorker, colonyCoastal,
 } from '../colony.js';
-import { unitName, unitIcon, unitBadge, isNaval, isPerson, cargoUnits, roomFor, addCargo, board, freeSlots } from '../units.js';
+import { unitName, unitIcon, unitBadge, isNaval, isPerson, hasHold, cargoUnits, roomFor, addCargo, board, freeSlots } from '../units.js';
 import { saveSoon } from '../save.js';
 import { selectUnit } from './mapui.js';
 
@@ -39,7 +39,7 @@ function selectionBar(u, c) {
   }
   if (aboard) btns.push(['ashore', 'Go ashore', '⛰️']);
   const ship = ui.colonyShip != null && unitById(ui.colonyShip);
-  if (u.where === 'map' && ship && freeSlots(ship) > 0) btns.push(['board', `Board ${unitName(ship)}`, '⛵']);
+  if (u.where === 'map' && ship && isNaval(ship) && freeSlots(ship) > 0) btns.push(['board', `Board ${unitName(ship)}`, '⛵']);
   if (u.where === 'map') btns.push(['showmap', 'On the map', '🗺️']);
   const job = inside && u.job
     ? (u.job.kind === 'tile' ? `Working a field: ${nameOf(u.job.good)}` : `Working in the ${BUILDINGS[u.job.b].name}`)
@@ -176,8 +176,12 @@ function warehouseHtml(c, r) {
   return chips.length ? `<div class="cargo">${chips.join('')}</div>` : '<p class="muted">Empty.</p>';
 }
 
-function shipsHtml(ships) {
-  if (!ships.length) return '<p class="muted">No ships in port.</p>';
+function shipsHtml(ships, c) {
+  if (!ships.length) {
+    return colonyCoastal(c)
+      ? '<p class="muted">Nothing here yet. Sail a ship (or drive a wagon train) onto the colony to load and unload goods.</p>'
+      : `<p class="muted">${esc(c.name)} is inland, so ships can't reach it. Build a 🐂 Wagon Train (Construction, then Change) to carry goods to a colony on the coast.</p>`;
+  }
   return ships.map(s => {
     const units = cargoUnits(s).map(u => unitChip(u));
     const goods = Object.entries(s.goods).map(([g, n]) => `<button class="chip good" data-act="unload" data-g="${g}" data-ship="${s.id}">${iconOf(g)}<small>${n}</small></button>`);
@@ -206,23 +210,23 @@ function render(el) {
   let sel = selected();
   if (sel && !S.units.includes(sel)) { ui.colonySel = null; sel = null; }
   const outside = colonyUnitsOutside(c);
-  const ships = outside.filter(isNaval);
-  const people = outside.filter(u => !isNaval(u));
+  const ships = outside.filter(hasHold);
+  const people = outside.filter(u => !hasHold(u));
   if (!ships.some(s => s.id === ui.colonyShip)) ui.colonyShip = ships.length ? ships[0].id : null;
 
   el.innerHTML = `
     <div class="scr-head">
       <button class="btn" data-act="close">‹ Map</button>
-      <div class="scr-title"><b>${esc(c.name)}</b><span>👥 ${workers(c).length} working here · 🔔 Rebels ${sol(c)}%</span></div>
+      <div class="scr-title"><b>${esc(c.name)}</b><span>👥 ${workers(c).length} working here · ${colonyCoastal(c) ? '⚓ coast' : '🌲 inland'} · 🔔 ${sol(c)}%</span></div>
     </div>
     ${sel ? selectionBar(sel, c) : summaryHtml(c, r, ships, people)}
     <section><h3>Fields <small>${sel ? 'green = can work here' : 'tap a colonist to move them'}</small></h3>${tilesHtml(c, r, sel)}</section>
     <section><h3>Production <small>per turn</small></h3>${productionHtml(c, r)}</section>
     <section><h3>Buildings <small>${sel ? 'green = room for one more' : 'colonists inside make goods'}</small></h3>${buildingsHtml(c, r, sel)}</section>
     <section><h3>Construction</h3>${constructionHtml(c, r)}</section>
-    <section><h3>Warehouse <small>holds ${storageCap(c)} of each${ships.length ? ' · tap goods to load the ship' : ''}</small></h3>${warehouseHtml(c, r)}</section>
+    <section><h3>Warehouse <small>holds ${storageCap(c)} of each${ships.length ? ` · tap goods to load the ${esc(unitName(unitById(ui.colonyShip)))}` : ''}</small></h3>${warehouseHtml(c, r)}</section>
     <section><h3>Outside the colony <small>not working</small></h3>${people.length ? `<div class="cargo">${people.map(u => unitChip(u)).join('')}</div>` : '<p class="muted">Nobody.</p>'}</section>
-    <section><h3>Ships in port</h3>${shipsHtml(ships)}</section>`;
+    <section><h3>${colonyCoastal(c) ? 'Ships and wagons here' : 'Wagons here'} <small>tap goods to unload</small></h3>${shipsHtml(ships, c)}</section>`;
   drawTiles(el, c);
 }
 

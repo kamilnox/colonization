@@ -1,6 +1,6 @@
 // Colonies: founding, jobs, production and what gets built.
 import {
-  TERRAIN, BONUS, SKILLS, BUILDINGS, BUILDABLE_UNITS, BUILD_PRIORITY, GOOD_KEYS, GOODS,
+  TERRAIN, BONUS, SKILLS, BUILDINGS, BUILDABLE_UNITS, BUILD_PRIORITY, GOOD_KEYS, GOODS, UNIT_TYPES,
   LIBERTY_PER_REBEL, FOOD_TO_GROW, BASE_STORAGE, COLONY_NAMES, PIONEER_TOOLS, iconOf, nameOf,
 } from './data.js';
 import {
@@ -253,7 +253,7 @@ export function buildCost(item) {
 }
 
 export function buildName(item) {
-  return BUILDINGS[item] ? BUILDINGS[item].name : 'Artillery';
+  return BUILDINGS[item] ? BUILDINGS[item].name : UNIT_TYPES[item].name;
 }
 
 export function buildOptions(c) {
@@ -271,13 +271,16 @@ export function buildOptions(c) {
     let reason = '';
     if (U.requires && !c.buildings[U.requires]) reason = `Needs ${BUILDINGS[U.requires].name}`;
     else if (pop < U.pop) reason = `Needs ${U.pop} colonists`;
-    opts.push({ id: k, name: buildName(k), icon: '💣', cost: U.cost, desc: 'Strong attacker, weak in the open.', reason });
+    opts.push({ id: k, name: buildName(k), icon: UNIT_TYPES[k].icon, cost: U.cost, desc: U.desc, reason });
   }
   return opts;
 }
 
 export function defaultBuild(c) {
   const opts = buildOptions(c).filter(o => !o.reason);
+  // An inland colony first needs a wagon train to get its goods to the coast.
+  const hasWagon = S.units.some(u => u.owner === c.owner && u.type === 'wagon');
+  if (!colonyCoastal(c) && !hasWagon && opts.some(o => o.id === 'wagon')) return 'wagon';
   for (const b of BUILD_PRIORITY) if (opts.some(o => o.id === b)) return b;
   return null;
 }
@@ -308,7 +311,7 @@ export function processColony(c) {
         else makeUnit(done, { x: c.x, y: c.y });
         notify(`${c.name} completed: ${buildName(done)}`, { kind: 'good' });
         c.warned.tools = false;
-        c.build = BUILDINGS[done] ? defaultBuild(c) : done;
+        c.build = defaultBuild(c);
       } else if (!c.warned.tools) {
         c.warned.tools = true;
         notify(`${c.name} needs ${cost.tools} tools to finish ${buildName(c.build)}.`, { kind: 'bad' });

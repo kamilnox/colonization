@@ -120,6 +120,7 @@ export const PIONEER_TOOLS = 100;
 export const UNIT_TYPES = {
   colonist:    { name: 'Colonist', person: true },
   artillery:   { name: 'Artillery', icon: '💣', moves: 1, att: 5, def: 3, price: 500 },
+  wagon:       { name: 'Wagon Train', icon: '🐂', moves: 2, holds: 2 },
   caravel:     { name: 'Caravel', icon: '⛵', naval: true, moves: 4, holds: 2, price: 1000 },
   merchantman: { name: 'Merchantman', icon: '🚢', naval: true, moves: 5, holds: 4, price: 2000 },
   galleon:     { name: 'Galleon', icon: '🛳️', naval: true, moves: 6, holds: 6, price: 3000 },
@@ -157,7 +158,8 @@ export const BUILDINGS = {
 };
 
 export const BUILDABLE_UNITS = {
-  artillery: { cost: { hammers: 192, tools: 40 }, pop: 1, requires: 'armory' },
+  wagon: { cost: { hammers: 40 }, pop: 1, desc: 'Carries goods over land, for colonies away from the sea.' },
+  artillery: { cost: { hammers: 192, tools: 40 }, pop: 1, requires: 'armory', desc: 'Strong attacker, weak in the open.' },
 };
 
 // Preferred order when a colony picks its next project on its own.

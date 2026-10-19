@@ -18,6 +18,7 @@ export const HELP_HTML = `
   <p><b>👥 Units</b> (top right) lists everyone: who is on the map, on a ship, working in a colony or waiting in Europe. Tap a name to jump to it.</p>
   <p><b>Ships.</b> Passengers show up in the Waiting row when the ship is next to land: tap one, then a bright land tile. Ships on the dark blue <i>high seas</i> can sail to Europe (3 turns each way).</p>
   <p><b>Colonies.</b> Any colonist on land can found one (🏠). A unit standing on the colony tile is <i>outside</i> and not working: tap <i>Work in ...</i> to put it to work. In the colony screen, tap a colonist, then a green field or building. Each colonist eats 2 food; 200 stored food grows a new colonist.</p>
+  <p><b>Coast or inland.</b> Ships can only dock at colonies right next to the sea. An inland colony needs a 🐂 Wagon Train (build it under Construction) to carry its goods to a coastal colony.</p>
   <p><b>Building.</b> Colonists in the Carpenter's House turn lumber into hammers 🔨, which build docks, stockades and more. Lumber comes from colonists working forest tiles.</p>
   <p><b>Trade.</b> Load goods from the warehouse onto a ship, sail to Europe and sell them. Buy tools, muskets and horses, recruit colonists, or train experts. Watch out for the King's taxes.</p>
   <p><b>Experts</b> produce double. Free colonists can learn a skill at a native village 🛖. Scouts 🤠 talk to chiefs and explore lost city rumours ❓.</p>

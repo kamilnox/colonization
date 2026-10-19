@@ -9,7 +9,7 @@ export function makeUnit(type, props = {}) {
     skill: T.person ? 'free' : null, role: 'none', tools: 0, vet: false, damaged: false,
     where: 'map', x: 0, y: 0, carrier: null, colony: null, job: null,
     moves: 0, state: 'active', work: null, path: null, waited: false,
-    goods: T.naval ? {} : null, sail: null, lastSea: null,
+    goods: T.holds ? {} : null, sail: null, lastSea: null,
     ...props,
   };
   u.moves = maxMoves(u);
@@ -26,7 +26,9 @@ export function removeUnit(u) {
 
 export const isPerson = u => !!UNIT_TYPES[u.type].person;
 export const isNaval = u => !!UNIT_TYPES[u.type].naval;
-export const isMilitary = u => (isPerson(u) ? u.role === 'soldier' || u.role === 'dragoon' : !isNaval(u));
+export const isMilitary = u => (isPerson(u) ? u.role === 'soldier' || u.role === 'dragoon' : !!UNIT_TYPES[u.type].att);
+// Ships and wagon trains carry goods.
+export const hasHold = u => !!UNIT_TYPES[u.type].holds;
 export const isVet = u => u.vet || (u.skill === 'veteran' && (u.role === 'soldier' || u.role === 'dragoon'));
 
 export function maxMoves(u) {
